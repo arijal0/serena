@@ -11,8 +11,11 @@ import type { Acuity, EscalationDecision, IntakeData, PipelineProgress } from ".
 
 export function getApiBase(): string {
   // 1. Explicit override always wins (set VITE_SERENA_API_URL in frontend/.env).
+  //    Strip any trailing slash(es) so callers can safely append "/api/...":
+  //    a value like "https://host/" would otherwise yield "https://host//api/..."
+  //    which 404s on the backend.
   const fromEnv = import.meta.env.VITE_SERENA_API_URL;
-  if (fromEnv) return fromEnv;
+  if (fromEnv) return fromEnv.replace(/\/+$/, "");
 
   // 2. Otherwise derive the backend host from however the page was loaded.
   //    On a laptop this is localhost; on an iPad over Wi-Fi it's the Mac's LAN
