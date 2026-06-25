@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     # (10.x, 172.16-31.x, 192.168.x) on any port.
     allowed_origin_regex: str = Field(
         default=(
+            # Production: any Vercel deployment (prod + preview URLs) over https.
+            r"https://([\w-]+\.)*vercel\.app"
+            r"|"
+            # Local dev (any port) on this machine or LAN devices over http.
             r"http://("
             r"localhost"
             r"|127\.0\.0\.1"

@@ -12,4 +12,8 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Force-enable the Nitro deploy plugin and hard-pin the Vercel preset.
+  // Without this, a self-hosted (non-Lovable) build skips Nitro entirely and
+  // produces no platform server output, so Vercel has nothing to run.
+  nitro: { preset: "vercel" },
 });

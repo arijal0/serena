@@ -1,0 +1,25 @@
+# Render Blueprint for the Serena backend (FastAPI + Gemini).
+# Deploy: Render Dashboard → New → Blueprint → pick this repo.
+# You will be prompted for GEMINI_API_KEY (it is intentionally not stored here).
+services:
+  - type: web
+    name: serena-backend
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SERENA_MODEL
+        value: gemini-2.5-flash
+      - key: SERENA_TEMPERATURE
+        value: "0.0"
+      - key: SERENA_TOP_P
+        value: "0.1"
+      - key: SERENA_MAX_OUTPUT_TOKENS
+        value: "2048"
