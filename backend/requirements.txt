@@ -1,0 +1,9 @@
+# Serena backend — three-agent obstetric triage pipeline
+# Python 3.11+ recommended
+
+google-genai>=1.20.0          # Current Google Gen AI SDK (successor to google-generativeai)
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.9.0
+pydantic-settings>=2.5.0
+python-dotenv>=1.0.1

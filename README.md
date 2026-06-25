@@ -156,36 +156,67 @@ The UI is built in **Lovable** as a polished React + TypeScript stack (Tailwind 
 
 ## Project Structure
 
-> Placeholder — to be populated as the implementation lands.
-
 ```
 serena/
 ├── README.md
 ├── frontend/        # Lovable-exported React + TypeScript UI
-└── backend/         # Three-agent pipeline + data contracts
+└── backend/         # Three-agent pipeline (FastAPI + Gemini 2.5 Flash)
+    ├── app/
+    │   ├── main.py              # FastAPI app + routes
+    │   ├── config.py            # env-driven settings (model, temperature, CORS)
+    │   ├── gemini_client.py     # deterministic structured-output wrapper
+    │   ├── schemas.py           # Pydantic data contracts (Schema 1/2/3)
+    │   ├── orchestrator.py      # sequential run + SSE streaming
+    │   ├── knowledge/acog_protocols.py   # ACOG/MEWS red-flag catalog + enforcement matrix
+    │   ├── prompts/             # finely tuned system instructions per agent
+    │   └── agents/              # agent runners (LLM + deterministic guards)
+    ├── demo.py                  # CLI demo with sample cases
+    ├── requirements.txt
+    └── .env.example
 ```
+
+The backend is implemented and documented in [`backend/README.md`](backend/README.md).
 
 ## Getting Started
 
-> Setup instructions will be added once the frontend and backend scaffolding are in place.
+### Backend (three-agent pipeline)
 
 ```bash
-# Frontend (placeholder)
-cd frontend
-npm install
-npm run dev
-
-# Backend (placeholder)
 cd backend
-# install + run the agent pipeline
+python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env                                  # then set GEMINI_API_KEY
+
+uvicorn app.main:app --reload --port 8000             # API + docs at /docs
+python demo.py --case preeclampsia                    # CLI demo for presentations
 ```
+
+Key endpoints: `POST /api/triage/run` (full pipeline), `POST /api/triage/stream`
+(SSE per-agent handoffs for the live monitor), `GET /api/protocols` (red-flag catalog).
+
+### Frontend (TanStack Start + Vite)
+
+```bash
+cd frontend
+bun install                                          # npm install also works
+cp .env.example .env                                 # set VITE_SERENA_API_URL if not localhost:8000
+bun dev                                              # or: npm run dev
+```
+
+The UI is wired to the backend through `src/lib/triage/runTriage.ts`, which calls the
+live three-agent pipeline (SSE streaming via `POST /api/triage/stream`, with the blocking
+`POST /api/triage/run` as a fallback). The backend base URL is read from the
+`VITE_SERENA_API_URL` env var (defaults to `http://localhost:8000`), so start the backend
+first, then the frontend.
 
 ## Roadmap
 
+- [x] Implement Agent 1 (Intake Listener)
+- [x] Implement Agent 2 (Clinical Translator)
+- [x] Implement Agent 3 (Protocol Enforcer)
+- [x] Deterministic ACOG/MEWS enforcement matrix + anti-dismissal safety net
+- [x] FastAPI surface with blocking + SSE-streaming pipeline endpoints
 - [ ] Wire Lovable-exported components to the live agent pipeline
-- [ ] Implement Agent 1 (Intake Listener)
-- [ ] Implement Agent 2 (Clinical Translator)
-- [ ] Implement Agent 3 (Protocol Enforcer)
 - [ ] Speech-to-Text modality (Whisper / Web Speech API)
 - [ ] SMART on FHIR integration layer
 - [ ] Charge Nurse enforcement dashboard with override logging
