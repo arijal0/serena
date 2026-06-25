@@ -10,7 +10,22 @@ import type { Acuity, EscalationDecision, IntakeData, PipelineProgress } from ".
  */
 
 export function getApiBase(): string {
-  return import.meta.env.VITE_SERENA_API_URL ?? "http://localhost:8000";
+  // 1. Explicit override always wins (set VITE_SERENA_API_URL in frontend/.env).
+  const fromEnv = import.meta.env.VITE_SERENA_API_URL;
+  if (fromEnv) return fromEnv;
+
+  // 2. Otherwise derive the backend host from however the page was loaded.
+  //    On a laptop this is localhost; on an iPad over Wi-Fi it's the Mac's LAN
+  //    IP (e.g. http://192.168.0.119:5173 -> http://192.168.0.119:8000).
+  //    This makes "localhost means the iPad itself" mistakes impossible.
+  if (typeof window !== "undefined" && window.location?.hostname) {
+    const { protocol, hostname } = window.location;
+    const scheme = protocol === "https:" ? "https:" : "http:";
+    return `${scheme}//${hostname}:8000`;
+  }
+
+  // 3. SSR / non-browser fallback.
+  return "http://localhost:8000";
 }
 
 // --- Backend contract (partial shapes; only what we map from) ---
@@ -172,14 +187,19 @@ const STEP_PENDING = "pending" as const;
 
 // --- Streaming path ---
 
+const FIRST_FRAME_TIMEOUT_MS = 10000;
+const BLOCKING_TIMEOUT_MS = 90000;
+
 async function runViaStream(
   intake: IntakeData,
   onProgress: (next: PipelineProgress) => void,
 ): Promise<EscalationDecision> {
+  const controller = new AbortController();
   const res = await fetch(`${getApiBase()}/api/triage/stream`, {
     method: "POST",
     headers: { "content-type": "application/json", accept: "text/event-stream" },
     body: JSON.stringify(toIntakeRequest(intake)),
+    signal: controller.signal,
   });
 
   if (!res.ok || !res.body) {
@@ -236,26 +256,40 @@ async function runViaStream(
     }
   };
 
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (value) {
-      buffer += decoder.decode(value, { stream: true });
-      let sepIndex: number;
-      while ((sepIndex = buffer.indexOf("\n\n")) !== -1) {
-        const block = buffer.slice(0, sepIndex);
-        buffer = buffer.slice(sepIndex + 2);
-        const frame = parseSseBlock(block);
-        if (frame) handleFrame(frame);
-      }
-    }
-    if (done) break;
-  }
+  // Watchdog: if the stream opens but delivers no bytes (e.g. iOS Safari not
+  // flushing chunked SSE), abort so the caller can fall back to /run.
+  let watchdog: ReturnType<typeof setTimeout> | undefined;
+  const armWatchdog = () => {
+    if (watchdog) clearTimeout(watchdog);
+    watchdog = setTimeout(() => controller.abort(), FIRST_FRAME_TIMEOUT_MS);
+  };
 
-  // Flush any trailing block without a terminating blank line.
-  buffer += decoder.decode();
-  if (buffer.trim().length > 0) {
-    const frame = parseSseBlock(buffer);
-    if (frame) handleFrame(frame);
+  try {
+    armWatchdog();
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (value) {
+        armWatchdog();
+        buffer += decoder.decode(value, { stream: true });
+        let sepIndex: number;
+        while ((sepIndex = buffer.indexOf("\n\n")) !== -1) {
+          const block = buffer.slice(0, sepIndex);
+          buffer = buffer.slice(sepIndex + 2);
+          const frame = parseSseBlock(block);
+          if (frame) handleFrame(frame);
+        }
+      }
+      if (done) break;
+    }
+
+    // Flush any trailing block without a terminating blank line.
+    buffer += decoder.decode();
+    if (buffer.trim().length > 0) {
+      const frame = parseSseBlock(buffer);
+      if (frame) handleFrame(frame);
+    }
+  } finally {
+    if (watchdog) clearTimeout(watchdog);
   }
 
   if (pipelineError) {
@@ -275,11 +309,19 @@ async function runViaBlocking(
 ): Promise<EscalationDecision> {
   onProgress({ step1: STEP_RUNNING, step2: STEP_PENDING, step3: STEP_PENDING });
 
-  const res = await fetch(`${getApiBase()}/api/triage/run`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(toIntakeRequest(intake)),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), BLOCKING_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(`${getApiBase()}/api/triage/run`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(toIntakeRequest(intake)),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!res.ok) {
     throw new Error(`Triage request failed with status ${res.status}`);
@@ -301,6 +343,13 @@ export async function runTriageViaBackend(
     return await runViaStream(intake, onProgress);
   } catch {
     // Streaming unavailable or interrupted — fall back to the blocking call.
-    return await runViaBlocking(intake, onProgress);
+    try {
+      return await runViaBlocking(intake, onProgress);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      throw new Error(
+        `Couldn't reach the Serena backend at ${getApiBase()} — ${detail}`,
+      );
+    }
   }
 }

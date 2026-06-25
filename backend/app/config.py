@@ -33,10 +33,22 @@ class Settings(BaseSettings):
         alias="SERENA_ALLOWED_ORIGINS",
     )
 
-    # Regex fallback so the API works on any localhost dev port without
+    # Regex fallback so the API works on any localhost dev port AND from other
+    # devices on the same Wi-Fi (e.g. an iPad hitting the Mac's LAN IP) without
     # enumerating every Vite/CRA/preview port the frontend might pick.
+    # Matches: localhost, 127.0.0.1, *.local hostnames, and RFC1918 private IPs
+    # (10.x, 172.16-31.x, 192.168.x) on any port.
     allowed_origin_regex: str = Field(
-        default=r"http://(localhost|127\.0\.0\.1):\d+",
+        default=(
+            r"http://("
+            r"localhost"
+            r"|127\.0\.0\.1"
+            r"|[\w-]+\.local"
+            r"|10(\.\d{1,3}){3}"
+            r"|172\.(1[6-9]|2\d|3[01])(\.\d{1,3}){2}"
+            r"|192\.168(\.\d{1,3}){2}"
+            r"):\d+"
+        ),
         alias="SERENA_ALLOWED_ORIGIN_REGEX",
     )
 
