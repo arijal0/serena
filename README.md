@@ -1,4 +1,4 @@
-# Nia — Maternal Protocol Enforcer
+# Serena — Maternal Protocol Enforcer
 
 > A multi-agent triage audit pipeline designed to eliminate implicit racial bias and symptom-dismissal in U.S. Emergency Departments and Obstetric Triage environments.
 
@@ -23,7 +23,7 @@
 
 ## Overview
 
-**Nia** (the Maternal Protocol Enforcer) is a high-density, multi-agent triage audit pipeline. It removes human subjectivity from initial obstetric intake and forces standard-of-care compliance via an unalterable digital audit trail.
+**Serena** (the Maternal Protocol Enforcer) is a high-density, multi-agent triage audit pipeline. It removes human subjectivity from initial obstetric intake and forces standard-of-care compliance via an unalterable digital audit trail.
 
 A patient in obstetric distress is handed a clinical tablet at triage. They select symptoms and describe their experience in their own words. A sequence of three specialized agents listens, translates the testimony into clinical metrics, and enforces ACOG emergency guidelines — producing a deterministic escalation decision that clinical staff cannot silently dismiss.
 
@@ -31,7 +31,7 @@ A patient in obstetric distress is handed a clinical tablet at triage. They sele
 
 - **The Disparity:** Per CDC data, Black women are **three times more likely** to die from pregnancy-related causes than White women (50.3 vs. 14.5 deaths per 100,000 live births).
 - **The Root Cause:** Nearly **1 in 4** Black mothers report at least one form of mistreatment or dismissal of symptoms during maternity care. Early warning signs of hypertensive crises (e.g., severe preeclampsia) are frequently miscoded as "normal pregnancy discomfort."
-- **The Preventability:** The CDC states **over 80% of pregnancy-related deaths are preventable**. Nia bridges the execution gap.
+- **The Preventability:** The CDC states **over 80% of pregnancy-related deaths are preventable**. Serena bridges the execution gap.
 
 ## How It Works
 
@@ -58,7 +58,7 @@ A patient in obstetric distress is handed a clinical tablet at triage. They sele
 
 ## Architecture
 
-Nia uses an **Agentic State Contract** design. No single model performs intake, translation, and compliance validation simultaneously — each agent operates within strict boundaries and hands off via a versioned JSON contract. This eliminates hallucination cascade and makes every step auditable.
+Serena uses an **Agentic State Contract** design. No single model performs intake, translation, and compliance validation simultaneously — each agent operates within strict boundaries and hands off via a versioned JSON contract. This eliminates hallucination cascade and makes every step auditable.
 
 - **Client:** React + TypeScript, styled with Tailwind CSS and `shadcn/ui` (exported from Lovable).
 - **Backend:** A three-agent pipeline orchestrating the schemas below.
@@ -68,7 +68,7 @@ Nia uses an **Agentic State Contract** design. No single model performs intake, 
 
 | Agent | Role | Objective | Output |
 | --- | --- | --- | --- |
-| **Agent 1** | The Intake Listener (Nia) | Empathetic advocate. Extracts direct, unfiltered patient testimony, strips dismissive framing, and preserves psychological intensity. | `Intake Payload` (Schema 1) |
+| **Agent 1** | The Intake Listener (Serena) | Empathetic advocate. Extracts direct, unfiltered patient testimony, strips dismissive framing, and preserves psychological intensity. | `Intake Payload` (Schema 1) |
 | **Agent 2** | The Clinical Translator | Quantitative parser. Matches qualitative strings to standard medical terminology and flags severe obstetric metrics without diagnosing. | `Clinical Assessment` (Schema 2) |
 | **Agent 3** | The Protocol Enforcer | Unyielding compliance engine. Treats Agent 2's vectors as ground truth and cross-references ACOG emergency guidelines to dictate hospital behavior. | `Enforcement Alert & Audit Trail` (Schema 3) |
 
@@ -151,7 +151,7 @@ The UI is built in **Lovable** as a polished React + TypeScript stack (Tailwind 
 ## Privacy & Engineering Constraints
 
 - **Zero-Retention Local Execution:** All processing operates strictly *in-memory*. No patient data, logs, or payloads persist on client storage or local files after a session is cleared.
-- **SMART on FHIR Blueprint:** In production, Nia acts as atomic middleware — retrieving from Epic/Cerner via FHIR REST, transforming in a HIPAA-compliant secure cloud instance, and committing the audit trail back via encrypted OAuth2. No patient information hits external or untrusted servers.
+- **SMART on FHIR Blueprint:** In production, Serena acts as atomic middleware — retrieving from Epic/Cerner via FHIR REST, transforming in a HIPAA-compliant secure cloud instance, and committing the audit trail back via encrypted OAuth2. No patient information hits external or untrusted servers.
 - **Deterministic Execution:** Every model client must be initialized with `temperature` of `0.0`–`0.1` to suppress variance and force reproducible, rule-bound behavior.
 
 ## Project Structure
@@ -192,4 +192,4 @@ cd backend
 
 ## Disclaimer
 
-Nia is a decision-support and compliance-auditing tool. It does **not** provide a medical diagnosis and is not a substitute for professional clinical judgment. All escalation decisions must be reviewed by licensed clinical staff.
+Serena is a decision-support and compliance-auditing tool. It does **not** provide a medical diagnosis and is not a substitute for professional clinical judgment. All escalation decisions must be reviewed by licensed clinical staff.
